@@ -120,18 +120,20 @@ parse_maps = {
         ("longitude_direction", str, 6),
         ("speed", convert_knots_to_mps, 7),
         ("true_course", convert_deg_to_rads, 8),
+        ],
+    "HDT": [
+        ("true_heading", convert_deg_to_rads, 1)
         ]
     }
 
 
 def parse_nmea_sentence(nmea_sentence):
     # Check for a valid nmea sentence
-    if not re.match('^\$GP.*\*[0-9A-Fa-f]{2}$', nmea_sentence):
+    if not re.match('^\$(GP|HE).*\*[0-9A-Fa-f]{2}$', nmea_sentence):
         logger.debug("Regex didn't match, sentence not valid NMEA? Sentence was: %s"
                      % repr(nmea_sentence))
         return False
     fields = [field.strip(',') for field in nmea_sentence.split(',')]
-
     # Ignore the $ and talker ID portions (e.g. GP)
     sentence_type = fields[0][3:]
 

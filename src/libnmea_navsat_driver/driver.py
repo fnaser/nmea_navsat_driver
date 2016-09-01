@@ -33,9 +33,10 @@
 import math
 
 import rospy
+import tf
+from sensor_msgs.msg import NavSatFix, NavSatStatus, TimeReference, Imu
+from geometry_msgs.msg import TwistStamped, Quaternion
 
-from sensor_msgs.msg import NavSatFix, NavSatStatus, TimeReference
-from geometry_msgs.msg import TwistStamped
 
 from libnmea_navsat_driver.checksum_utils import check_nmea_checksum
 import libnmea_navsat_driver.parser
@@ -46,6 +47,7 @@ class RosNMEADriver(object):
         self.fix_pub = rospy.Publisher('fix', NavSatFix, queue_size=1)
         self.vel_pub = rospy.Publisher('vel', TwistStamped, queue_size=1)
         self.time_ref_pub = rospy.Publisher('time_reference', TimeReference, queue_size=1)
+        self.heading_pub = rospy.Publisher('true_heading', Imu, queue_size=1)
 
         self.time_ref_source = rospy.get_param('~time_ref_source', None)
         self.use_RMC = rospy.get_param('~useRMC', False)
@@ -77,6 +79,7 @@ class RosNMEADriver(object):
             current_time_ref.source = self.time_ref_source
         else:
             current_time_ref.source = frame_id
+
 
         if not self.use_RMC and 'GGA' in parsed_sentence:
             data = parsed_sentence['GGA']
@@ -165,6 +168,17 @@ class RosNMEADriver(object):
                 current_vel.twist.linear.y = data['speed'] * \
                     math.cos(data['true_course'])
                 self.vel_pub.publish(current_vel)
+        elif 'HDT' in parsed_sentence:
+            data = parsed_sentence['HDT']
+            heading_rad = data['true_heading']
+            quat = tf.transformations.quaternion_from_euler(0.0, 0.0, heading_rad )
+            imu_msg = Imu()
+            imu_msg.orientation.x = quat[0]
+            imu_msg.orientation.y = quat[1] 
+            imu_msg.orientation.z = quat[2]
+            imu_msg.orientation.w = quat[3]            
+            self.heading_pub.publish(imu_msg)
+            
         else:
             return False
 
